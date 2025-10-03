@@ -1,0 +1,14 @@
+{
+  "watch": ["server.js", "client/**/*.jsx", "client/**/*.js"],
+  "ignore": [
+    ".git",
+    ".claude",
+    "node_modules",
+    "dist",
+    "*.log",
+    ".env",
+    ".env.*"
+  ],
+  "ext": "js,jsx,json",
+  "delay": 1000
+}

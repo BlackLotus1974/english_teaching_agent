@@ -1,132 +1,86 @@
 import { useEffect, useState } from "react";
+import { tutorInstructions } from "../../shared/tutorInstructions.js";
 
-const functionDescription = `
-Call this function when a user asks for a color palette.
-`;
-
-const sessionUpdate = {
+// Full session configuration to be sent after session is created
+const sessionUpdateConfig = {
   type: "session.update",
   session: {
     type: "realtime",
-    tools: [
-      {
-        type: "function",
-        name: "display_color_palette",
-        description: functionDescription,
-        parameters: {
-          type: "object",
-          strict: true,
-          properties: {
-            theme: {
-              type: "string",
-              description: "Description of the theme for the color scheme.",
-            },
-            colors: {
-              type: "array",
-              description: "Array of five hex color codes based on the theme.",
-              items: {
-                type: "string",
-                description: "Hex color code",
-              },
-            },
-          },
-          required: ["theme", "colors"],
-        },
+    model: "gpt-realtime",
+    audio: {
+      output: {
+        voice: "alloy",
       },
-    ],
-    tool_choice: "auto",
+    },
+    instructions: tutorInstructions,
   },
 };
-
-function FunctionCallOutput({ functionCallOutput }) {
-  const { theme, colors } = JSON.parse(functionCallOutput.arguments);
-
-  const colorBoxes = colors.map((color) => (
-    <div
-      key={color}
-      className="w-full h-16 rounded-md flex items-center justify-center border border-gray-200"
-      style={{ backgroundColor: color }}
-    >
-      <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
-        {color}
-      </p>
-    </div>
-  ));
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p>Theme: {theme}</p>
-      {colorBoxes}
-      <pre className="text-xs bg-gray-100 rounded-md p-2 overflow-x-auto">
-        {JSON.stringify(functionCallOutput, null, 2)}
-      </pre>
-    </div>
-  );
-}
 
 export default function ToolPanel({
   isSessionActive,
   sendClientEvent,
   events,
 }) {
-  const [functionAdded, setFunctionAdded] = useState(false);
-  const [functionCallOutput, setFunctionCallOutput] = useState(null);
+  const [audioConfigured, setAudioConfigured] = useState(false);
 
   useEffect(() => {
     if (!events || events.length === 0) return;
 
     const firstEvent = events[events.length - 1];
-    if (!functionAdded && firstEvent.type === "session.created") {
-      sendClientEvent(sessionUpdate);
-      setFunctionAdded(true);
-    }
+    if (!audioConfigured && firstEvent.type === "session.created") {
+      // Step 1: Configure session with instructions and audio settings
+      console.log("Configuring session with English tutor instructions...");
+      sendClientEvent(sessionUpdateConfig);
+      setAudioConfigured(true);
 
-    const mostRecentEvent = events[0];
-    if (
-      mostRecentEvent.type === "response.done" &&
-      mostRecentEvent.response.output
-    ) {
-      mostRecentEvent.response.output.forEach((output) => {
-        if (
-          output.type === "function_call" &&
-          output.name === "display_color_palette"
-        ) {
-          setFunctionCallOutput(output);
-          setTimeout(() => {
-            sendClientEvent({
-              type: "response.create",
-              response: {
-                instructions: `
-                ask for feedback about the color palette - don't repeat 
-                the colors, just ask if they like the colors.
-              `,
-              },
-            });
-          }, 500);
-        }
-      });
+      // Step 2: Trigger initial greeting after session is configured
+      setTimeout(() => {
+        console.log("Triggering initial greeting...");
+        sendClientEvent({
+          type: "response.create",
+        });
+      }, 500);
     }
   }, [events]);
 
   useEffect(() => {
     if (!isSessionActive) {
-      setFunctionAdded(false);
-      setFunctionCallOutput(null);
+      setAudioConfigured(false);
     }
   }, [isSessionActive]);
 
   return (
     <section className="h-full w-full flex flex-col gap-4">
-      <div className="h-full bg-gray-50 rounded-md p-4">
-        <h2 className="text-lg font-bold">Color Palette Tool</h2>
-        {isSessionActive
-          ? (
-            functionCallOutput
-              ? <FunctionCallOutput functionCallOutput={functionCallOutput} />
-              : <p>Ask for advice on a color palette...</p>
-          )
-          : <p>Start the session to use this tool...</p>}
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 rounded-md p-4">
+        <h2 className="text-xl font-bold text-purple-700 mb-4">English Practice Time! 🎓</h2>
+        {isSessionActive ? (
+          <div className="flex flex-col gap-3">
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Tips for great practice:</p>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>✓ Speak clearly and take your time</li>
+                <li>✓ Don't worry about mistakes</li>
+                <li>✓ Ask questions if you don't understand</li>
+                <li>✓ Have fun with the conversation!</li>
+              </ul>
+            </div>
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Talk about:</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Your day</span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Hobbies</span>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Books</span>
+                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Games</span>
+                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded">Stories</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-600">Click "Connect" to start practicing English! 🎤</p>
+        )}
       </div>
     </section>
   );
 }
+
+

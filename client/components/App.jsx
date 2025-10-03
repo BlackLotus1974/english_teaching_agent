@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "/assets/openai-logomark.svg";
-import EventLog from "./EventLog";
+import Avatar3D from "./Avatar3D";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 
@@ -17,13 +17,36 @@ export default function App() {
     const data = await tokenResponse.json();
     const EPHEMERAL_KEY = data.value;
 
+    console.log("Got ephemeral key:", EPHEMERAL_KEY?.substring(0, 10) + "...");
+
     // Create a peer connection
     const pc = new RTCPeerConnection();
 
     // Set up to play remote audio from the model
     audioElement.current = document.createElement("audio");
     audioElement.current.autoplay = true;
-    pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);
+    audioElement.current.volume = 1.0;
+    document.body.appendChild(audioElement.current);
+
+    pc.ontrack = (e) => {
+      console.log("Received audio track from OpenAI", e.streams[0]);
+      audioElement.current.srcObject = e.streams[0];
+
+      // Add event listeners for debugging
+      audioElement.current.onplay = () => console.log("Audio element started playing");
+      audioElement.current.onpause = () => console.log("Audio element paused");
+      audioElement.current.onerror = (err) => console.error("Audio element error:", err);
+      audioElement.current.onloadedmetadata = () => {
+        console.log("Audio metadata loaded, duration:", audioElement.current.duration);
+        console.log("Audio ready state:", audioElement.current.readyState);
+        console.log("Audio volume:", audioElement.current.volume);
+        console.log("Audio muted:", audioElement.current.muted);
+      };
+
+      audioElement.current.play()
+        .then(() => console.log("Audio play() succeeded"))
+        .catch(err => console.error("Audio play error:", err));
+    };
 
     // Add local audio track for microphone input in the browser
     const ms = await navigator.mediaDevices.getUserMedia({
@@ -39,8 +62,13 @@ export default function App() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
+    // EXACTLY like the original console - direct call to OpenAI
     const baseUrl = "https://api.openai.com/v1/realtime/calls";
-    const model = "gpt-realtime";
+    const model = "gpt-realtime"; // Use original model name first
+
+    console.log("Calling OpenAI directly:", baseUrl);
+    console.log("Model:", model);
+
     const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
       method: "POST",
       body: offer.sdp,
@@ -50,7 +78,11 @@ export default function App() {
       },
     });
 
+    console.log("OpenAI response:", sdpResponse.status);
+
     const sdp = await sdpResponse.text();
+    console.log("SDP answer length:", sdp.length);
+
     const answer = { type: "answer", sdp };
     await pc.setRemoteDescription(answer);
 
@@ -71,6 +103,16 @@ export default function App() {
 
     if (peerConnection.current) {
       peerConnection.current.close();
+    }
+
+    // Clean up audio element
+    if (audioElement.current) {
+      audioElement.current.pause();
+      audioElement.current.srcObject = null;
+      if (audioElement.current.parentNode) {
+        audioElement.current.parentNode.removeChild(audioElement.current);
+      }
+      audioElement.current = null;
     }
 
     setIsSessionActive(false);
@@ -130,6 +172,20 @@ export default function App() {
           event.timestamp = new Date().toLocaleTimeString();
         }
 
+        // Log important events with full details
+        if (event.type === "response.audio.delta" ||
+            event.type === "response.audio_transcript.delta" ||
+            event.type === "response.done" ||
+            event.type === "error") {
+          console.log("Event:", event.type, event);
+          if (event.type === "error") {
+            console.error("ERROR DETAILS:", JSON.stringify(event, null, 2));
+          }
+          if (event.type === "response.done" && event.response?.status === "failed") {
+            console.error("RESPONSE FAILED:", JSON.stringify(event.response?.status_details, null, 2));
+          }
+        }
+
         setEvents((prev) => [event, ...prev]);
       });
 
@@ -143,16 +199,16 @@ export default function App() {
 
   return (
     <>
-      <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
-        <div className="flex items-center gap-4 w-full m-4 pb-2 border-0 border-b border-solid border-gray-200">
+      <nav className="absolute top-0 left-0 right-0 h-16 flex items-center bg-gradient-to-r from-purple-500 to-blue-500">
+        <div className="flex items-center gap-4 w-full m-4 pb-2">
           <img style={{ width: "24px" }} src={logo} />
-          <h1>realtime console</h1>
+          <h1 className="text-white font-bold text-xl">English Practice Buddy 🌟</h1>
         </div>
       </nav>
       <main className="absolute top-16 left-0 right-0 bottom-0">
         <section className="absolute top-0 left-0 right-[380px] bottom-0 flex">
-          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
-            <EventLog events={events} />
+          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 flex items-center justify-center bg-gradient-to-b from-blue-50 to-purple-50">
+            <Avatar3D audioElement={audioElement.current} />
           </section>
           <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
             <SessionControls
