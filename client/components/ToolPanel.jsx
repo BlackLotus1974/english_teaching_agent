@@ -9,7 +9,7 @@ const sessionUpdateConfig = {
     model: "gpt-realtime",
     audio: {
       output: {
-        voice: "alloy",
+        voice: "shimmer", // Female voice for female avatar
       },
     },
     instructions: tutorInstructions,

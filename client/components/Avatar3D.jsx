@@ -8,6 +8,7 @@ export default function Avatar3D({ audioElement }) {
   const avatarRef = useRef(null);
   const analyzerRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const morphTargetMeshesRef = useRef([]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -17,15 +18,15 @@ export default function Avatar3D({ audioElement }) {
     scene.background = new THREE.Color(0xf0f4ff);
     sceneRef.current = scene;
 
-    // Camera setup
+    // Camera setup - closer view focused on face
     const camera = new THREE.PerspectiveCamera(
       45,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
       0.1,
       1000
     );
-    camera.position.set(0, 1.6, 3);
-    camera.lookAt(0, 1.6, 0);
+    camera.position.set(0, 1.65, 0.8);  // Closer to face
+    camera.lookAt(0, 1.65, 0);  // Look at head height
 
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -56,17 +57,24 @@ export default function Avatar3D({ audioElement }) {
         avatar.position.set(0, 0, 0);
         avatar.scale.set(1, 1, 1);
 
-        // Enable shadows
+        // Enable shadows and find meshes with morph targets
         avatar.traverse((node) => {
           if (node.isMesh) {
             node.castShadow = true;
             node.receiveShadow = true;
+
+            // Check for morph targets (blend shapes) for lip sync
+            if (node.morphTargetDictionary && node.morphTargetInfluences) {
+              morphTargetMeshesRef.current.push(node);
+              console.log(`Found mesh with morph targets: ${node.name}`, Object.keys(node.morphTargetDictionary));
+            }
           }
         });
 
         scene.add(avatar);
         avatarRef.current = avatar;
         console.log("Avatar loaded successfully");
+        console.log(`Found ${morphTargetMeshesRef.current.length} meshes with morph targets for lip sync`);
       },
       (progress) => {
         console.log(`Loading avatar: ${(progress.loaded / progress.total) * 100}%`);
@@ -88,30 +96,43 @@ export default function Avatar3D({ audioElement }) {
         avatarRef.current.position.y = Math.sin(idleTime * 2) * 0.02;
       }
 
-      // Audio-based animation
-      if (analyzerRef.current && avatarRef.current) {
+      // Audio-based lip sync animation using morph targets
+      if (analyzerRef.current && morphTargetMeshesRef.current.length > 0) {
         const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount);
         analyzerRef.current.getByteFrequencyData(dataArray);
 
         // Calculate average volume
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        const normalized = average / 255;
+        const normalized = Math.min(average / 128, 1); // Normalize to 0-1, more sensitive
 
-        // Find mouth/head bone and animate (if available)
-        avatarRef.current.traverse((node) => {
-          if (node.isBone) {
-            if (node.name.toLowerCase().includes('jaw') ||
-                node.name.toLowerCase().includes('mouth')) {
-              // Animate jaw based on audio
-              node.rotation.x = -normalized * 0.3;
+        // Animate morph targets for lip sync
+        morphTargetMeshesRef.current.forEach((mesh) => {
+          const dict = mesh.morphTargetDictionary;
+          const influences = mesh.morphTargetInfluences;
+
+          // Try multiple possible morph target naming conventions
+          const mouthTargets = [
+            'mouthOpen', 'jawOpen', 'mouthSmile',
+            'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U',
+            'viseme_PP', 'viseme_FF', 'viseme_TH', 'viseme_DD', 'viseme_kk',
+            'viseme_CH', 'viseme_SS', 'viseme_nn', 'viseme_RR', 'viseme_sil',
+            'jawForward', 'mouthClose', 'mouthFunnel', 'mouthPucker',
+            'mouthLeft', 'mouthRight', 'mouthShrugLower', 'mouthShrugUpper'
+          ];
+
+          mouthTargets.forEach((targetName) => {
+            if (dict[targetName] !== undefined) {
+              const index = dict[targetName];
+              // Smooth interpolation for natural movement
+              // Use higher intensity for better visibility
+              const targetValue = normalized * 1.2;
+              influences[index] = THREE.MathUtils.lerp(
+                influences[index] || 0,
+                targetValue,
+                0.4 // Faster response
+              );
             }
-          }
-
-          // Scale-based mouth animation if no bones found
-          if (node.isMesh && node.name.toLowerCase().includes('head')) {
-            const targetScale = 1 + normalized * 0.05;
-            node.scale.y = THREE.MathUtils.lerp(node.scale.y, targetScale, 0.1);
-          }
+          });
         });
       }
 
@@ -143,17 +164,37 @@ export default function Avatar3D({ audioElement }) {
 
   // Set up audio analysis when audio element changes
   useEffect(() => {
-    if (!audioElement || !audioElement.srcObject) return;
+    if (!audioElement || !audioElement.srcObject) {
+      console.log("Audio element not ready:", { audioElement, srcObject: audioElement?.srcObject });
+      return;
+    }
 
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioContext.createMediaStreamSource(audioElement.srcObject);
       const analyzer = audioContext.createAnalyser();
       analyzer.fftSize = 256;
+      analyzer.smoothingTimeConstant = 0.8;
       source.connect(analyzer);
 
       analyzerRef.current = analyzer;
-      console.log("Audio analyzer connected");
+      console.log("Audio analyzer connected successfully!");
+      console.log("Frequency bin count:", analyzer.frequencyBinCount);
+
+      // Test if we're getting audio data
+      const testData = new Uint8Array(analyzer.frequencyBinCount);
+      const checkAudio = setInterval(() => {
+        analyzer.getByteFrequencyData(testData);
+        const avg = testData.reduce((a, b) => a + b) / testData.length;
+        if (avg > 0) {
+          console.log("Audio detected! Average level:", avg);
+          clearInterval(checkAudio);
+        }
+      }, 500);
+
+      // Clear interval after 10 seconds
+      setTimeout(() => clearInterval(checkAudio), 10000);
+
     } catch (error) {
       console.error("Error setting up audio analysis:", error);
     }

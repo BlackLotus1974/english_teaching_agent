@@ -31,7 +31,7 @@ const sessionConfig = JSON.stringify({
     model: "gpt-realtime",
     audio: {
       output: {
-        voice: "alloy",
+        voice: "shimmer", // Female voice for female avatar
       },
     },
   },
