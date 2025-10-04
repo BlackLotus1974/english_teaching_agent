@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { tutorInstructions } from "../../shared/tutorInstructions.js";
+import TopicCards from "./TopicCards";
 
 // Full session configuration to be sent after session is created
 const sessionUpdateConfig = {
@@ -22,6 +23,29 @@ export default function ToolPanel({
   events,
 }) {
   const [audioConfigured, setAudioConfigured] = useState(false);
+
+  // Handle topic card selection - send user message to AI
+  const handleTopicSelect = (topic) => {
+    console.log("Topic selected:", topic.label);
+
+    // Send the topic prompt as a user message
+    sendClientEvent({
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: topic.prompt,
+          },
+        ],
+      },
+    });
+
+    // Request AI response
+    sendClientEvent({ type: "response.create" });
+  };
 
   useEffect(() => {
     if (!events || events.length === 0) return;
@@ -64,19 +88,13 @@ export default function ToolPanel({
                 <li>✓ Have fun with the conversation!</li>
               </ul>
             </div>
-            <div className="bg-white rounded-lg p-3 shadow-sm">
-              <p className="text-sm font-semibold text-gray-700 mb-2">Talk about:</p>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Your day</span>
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Hobbies</span>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Books</span>
-                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Games</span>
-                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded">Stories</span>
-              </div>
-            </div>
+            <TopicCards onTopicSelect={handleTopicSelect} isSessionActive={isSessionActive} />
           </div>
         ) : (
-          <p className="text-gray-600">Click "Connect" to start practicing English! 🎤</p>
+          <div className="flex flex-col gap-3">
+            <p className="text-gray-600">Click "Connect" to start practicing English! 🎤</p>
+            <TopicCards onTopicSelect={handleTopicSelect} isSessionActive={isSessionActive} />
+          </div>
         )}
       </div>
     </section>

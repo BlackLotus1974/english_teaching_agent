@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Avatar Inspector</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <h1>Avatar Structure Inspector</h1>
+    <div id="info"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const loader = new GLTFLoader();
+        const info = document.getElementById('info');
+
+        loader.load('/avatar.glb', (gltf) => {
+            info.innerHTML += '<h2>Avatar Loaded Successfully!</h2>';
+
+            // Log all bones
+            info.innerHTML += '<h3>Bones Found:</h3><ul>';
+            let boneCount = 0;
+            gltf.scene.traverse((node) => {
+                if (node.isBone) {
+                    boneCount++;
+                    info.innerHTML += `<li>${node.name}</li>`;
+                }
+            });
+            info.innerHTML += `</ul><p>Total bones: ${boneCount}</p>`;
+
+            // Log all meshes
+            info.innerHTML += '<h3>Meshes Found:</h3><ul>';
+            gltf.scene.traverse((node) => {
+                if (node.isMesh) {
+                    info.innerHTML += `<li>${node.name}</li>`;
+
+                    // Check for morph targets
+                    if (node.morphTargetDictionary) {
+                        info.innerHTML += '<ul><li>Morph Targets:<ul>';
+                        for (let key in node.morphTargetDictionary) {
+                            info.innerHTML += `<li>${key}</li>`;
+                        }
+                        info.innerHTML += '</ul></li></ul>';
+                    }
+                }
+            });
+            info.innerHTML += '</ul>';
+
+            // Check for animations
+            info.innerHTML += '<h3>Animations:</h3>';
+            if (gltf.animations && gltf.animations.length > 0) {
+                info.innerHTML += '<ul>';
+                gltf.animations.forEach(clip => {
+                    info.innerHTML += `<li>${clip.name} (${clip.duration}s)</li>`;
+                });
+                info.innerHTML += '</ul>';
+            } else {
+                info.innerHTML += '<p>No animations found</p>';
+            }
+
+        }, undefined, (error) => {
+            info.innerHTML += `<p style="color: red;">Error: ${error}</p>`;
+        });
+    </script>
+</body>
+</html>

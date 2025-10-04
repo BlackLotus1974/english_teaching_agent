@@ -1,0 +1,63 @@
+{
+  "middleware": {
+    "name": "Claude Code Debug Middleware",
+    "version": "1.0.0",
+    "description": "Automatic debugging log generation for Claude Code MCP sessions"
+  },
+  "logging": {
+    "enabled": true,
+    "logLevel": "verbose",
+    "outputDirectory": "logs/debugging-sessions",
+    "maxLogSize": "10MB",
+    "maxLogFiles": 100,
+    "retentionDays": 30
+  },
+  "detection": {
+    "errorKeywords": [
+      "error", "exception", "failed", "failure", "bug", "issue",
+      "unexpected", "crash", "crashed", "broken", "fix", "debug",
+      "traceback", "stack trace", "syntax error", "runtime error",
+      "compilation error", "build failed", "test failed"
+    ],
+    "errorPatterns": [
+      "error:",
+      "exception:",
+      "failed",
+      "traceback",
+      "syntax error",
+      "runtime error",
+      "compilation error",
+      "build failed",
+      "test failed",
+      "\\[error\\]",
+      "\\berror\\b.*\\bline\\b"
+    ],
+    "autoDetection": true,
+    "manualTriggers": true
+  },
+  "output": {
+    "formats": ["markdown", "json"],
+    "includeRawData": true,
+    "generateIndividualLogs": true,
+    "createSessionSummaries": true
+  },
+  "integration": {
+    "claudeCodeMcp": {
+      "command": "npx",
+      "args": ["@anthropic/claude-code-mcp"],
+      "timeout": 30000
+    },
+    "hooks": {
+      "onSessionStart": [],
+      "onErrorDetected": [],
+      "onLogGenerated": [],
+      "onSessionEnd": []
+    }
+  },
+  "performance": {
+    "maxConcurrentSessions": 10,
+    "debugPromptTimeout": 15000,
+    "logWriteTimeout": 5000,
+    "memoryCleanupInterval": 300000
+  }
+}

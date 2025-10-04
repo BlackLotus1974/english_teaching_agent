@@ -3,13 +3,18 @@ import logo from "/assets/openai-logomark.svg";
 import Avatar3D from "./Avatar3D";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
+import StarProgress from "./StarProgress";
 
 export default function App() {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [events, setEvents] = useState([]);
   const [dataChannel, setDataChannel] = useState(null);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
+  const starProgressRef = useRef(null);
+  const [avatarEmotion, setAvatarEmotion] = useState('neutral');
+  const [isAvatarListening, setIsAvatarListening] = useState(false);
 
   async function startSession() {
     // Get a session token for OpenAI Realtime API
@@ -115,6 +120,9 @@ export default function App() {
       audioElement.current = null;
     }
 
+    // Award star for completed session
+    setSessionCompleted(true);
+
     setIsSessionActive(false);
     setDataChannel(null);
     peerConnection.current = null;
@@ -172,6 +180,22 @@ export default function App() {
           event.timestamp = new Date().toLocaleTimeString();
         }
 
+        // Update avatar emotion based on AI events
+        if (event.type === "response.created") {
+          setAvatarEmotion('happy');
+        } else if (event.type === "response.audio.delta") {
+          setAvatarEmotion('neutral');
+        } else if (event.type === "input_audio_buffer.speech_started") {
+          setIsAvatarListening(true);
+        } else if (event.type === "input_audio_buffer.speech_stopped") {
+          setIsAvatarListening(false);
+          setAvatarEmotion('thinking');
+        } else if (event.type === "response.done") {
+          setAvatarEmotion('encouraging');
+          // Return to neutral after 2 seconds
+          setTimeout(() => setAvatarEmotion('neutral'), 2000);
+        }
+
         // Log important events with full details
         if (event.type === "response.audio.delta" ||
             event.type === "response.audio_transcript.delta" ||
@@ -208,7 +232,11 @@ export default function App() {
       <main className="absolute top-16 left-0 right-0 bottom-0">
         <section className="absolute top-0 left-0 right-[380px] bottom-0 flex">
           <section className="absolute top-0 left-0 right-0 bottom-32 px-4 flex items-center justify-center bg-gradient-to-b from-blue-50 to-purple-50">
-            <Avatar3D audioElement={audioElement.current} />
+            <Avatar3D
+              audioElement={audioElement.current}
+              emotion={avatarEmotion}
+              isListening={isAvatarListening}
+            />
           </section>
           <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
             <SessionControls
@@ -221,7 +249,13 @@ export default function App() {
             />
           </section>
         </section>
-        <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto">
+        <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto flex flex-col gap-4">
+          <StarProgress
+            ref={starProgressRef}
+            isSessionActive={isSessionActive}
+            sessionCompleted={sessionCompleted}
+            onSessionComplete={() => setSessionCompleted(false)}
+          />
           <ToolPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}

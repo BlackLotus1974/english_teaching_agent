@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir)",
+      "Read(//c/Users/eshay/agent-methdology/**)",
+      "Bash(git clone:*)",
+      "Bash(cp:*)",
+      "Bash(test:*)",
+      "Bash(npm install)",
+      "Bash(curl -L \"https://models.readyplayer.me/68dfe5343448aa53be20740a.glb\" -o \"C:\\Users\\eshay\\agent-methdology\\english-teaching-agent\\public\\avatar.glb\")",
+      "Bash(curl:*)",
+      "Bash(uvx:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(dir /B clientcomponents)",
+      "Bash(taskmaster:*)",
+      "Bash(npx taskmaster:*)",
+      "Bash(npx:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git restore:*)",
+      "Bash(del nul)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "mcpServers": {
+    "claude-code-debug": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "claude-code-debug-middleware/middleware.js"
+      ],
+      "env": {
+        "DEBUG_MODE": "true",
+        "LOG_LEVEL": "verbose"
+      },
+      "disabled": false,
+      "autoApprove": ["debug_log_request", "debug_request"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ],
+      "env": {}
+    },
+    "taskmaster-ai": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "--package=task-master-ai", "task-master-ai"],
+      "env": {}
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "C:\\Users\\eshay\\agent-methdology\\english-teaching-agent"
+      ],
+      "env": {}
+    }
+  }
+}

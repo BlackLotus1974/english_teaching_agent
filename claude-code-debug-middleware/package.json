@@ -1,0 +1,19 @@
+{
+  "name": "claude-code-debug-middleware",
+  "version": "1.0.0",
+  "description": "Debugging middleware wrapper for Claude Code MCP",
+  "type": "module",
+  "main": "middleware.js",
+  "scripts": {
+    "start": "node middleware.js",
+    "dev": "node --watch middleware.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "uuid": "^9.0.0",
+    "date-fns": "^2.30.0"
+  },
+  "keywords": ["claude", "mcp", "debugging", "middleware", "logging"],
+  "author": "Your Name",
+  "license": "MIT"
+}
