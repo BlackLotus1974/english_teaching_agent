@@ -360,104 +360,337 @@ const responseEvent = {
 
 ## Example Scenarios
 
-### Scenario 1: Conversational AI Tutoring System
-**Context**: English language learning application for children
+### Scenario 1: Educational AI Tutoring System
+**Context**: Real-world English language learning application for children
 
 **Implementation Example**:
 ```javascript
-// Context configuration for educational AI
-const educationalContext = {
-  instructions: {
-    role: "enthusiastic English tutor",
-    target_audience: "children aged 6-12",
-    constraints: ["English only", "short responses", "encouraging tone"],
-    objectives: ["improve pronunciation", "build vocabulary", "increase confidence"]
+// Multi-layered context system from production application
+const tutorContext = {
+  // Base behavioral layer
+  coreInstructions: `You are an enthusiastic English tutor for children, especially for a girl called Inbar. 
+    CRITICAL RULES: 1) ONLY do English tutoring 2) ALWAYS speak English 3) Keep responses 1-2 sentences 
+    4) Ask about sisters Tamar and Ayala, dogs Lotus and Albi 5) Correct pronunciation gently`,
+  
+  // Mode-specific behavior modifications
+  modeInstructions: {
+    happy: "Be EXTRA cheerful and enthusiastic. Use excitement words: 'Amazing!', 'Wonderful!'",
+    story: "Tell SHORT interactive stories (2-3 sentences). Ask 'What happens next?'",
+    question: "Ask LOTS of follow-up questions. Use 'why', 'how', 'tell me more'"
   },
+  
+  // User-specific context
   userProfile: {
     name: "Inbar",
-    age: 8,
-    proficiency: "beginner",
-    interests: ["family", "pets", "games"],
-    family_context: ["sisters: Tamar, Ayala", "dogs: Lotus, Albi"]
+    family: ["sisters: Tamar, Ayala", "dogs: Lotus, Albi"],
+    interests: ["family", "pets", "games", "school"],
+    progress: { totalStars: 15, currentStreak: 3 }
   },
+  
+  // Real-time session state
   sessionState: {
-    current_topic: null,
-    mistakes_corrected: [],
-    achievements: [],
-    session_duration: 0
+    isActive: true,
+    currentMode: "happy",
+    selectedTopic: "family",
+    avatarEmotion: "encouraging",
+    isListening: false,
+    eventHistory: []
+  },
+  
+  // Available interaction tools
+  tools: {
+    topicCards: ["family", "school", "hobbies", "imagination"],
+    encouragementAnimations: ["confetti", "sparkles", "starBurst"],
+    avatarExpressions: ["happy", "excited", "thinking", "encouraging"],
+    progressTracking: { stars: true, milestones: true }
   }
 };
+
+// Context update patterns
+function updateContextFromEvent(event) {
+  switch(event.type) {
+    case "response.created":
+      sessionState.avatarEmotion = "happy";
+      break;
+    case "input_audio_buffer.speech_started":
+      sessionState.isListening = true;
+      break;
+    case "response.audio_transcript.delta":
+      if (event.delta.includes("perfect")) {
+        tools.encouragementAnimations.trigger("confetti");
+        sessionState.avatarEmotion = "excited";
+      }
+      break;
+  }
+}
 ```
 
 **Key Context Components**:
-- **Instructions**: Specialized tutoring behavior with child-friendly approach
-- **Long-term Memory**: Student progress tracking and family context
-- **State/History**: Conversation flow and correction history
-- **Tools**: Pronunciation analysis, progress tracking, gamification
+- **Layered Instructions**: Base rules + mode-specific behaviors + real-time adaptations
+- **User Profile**: Family context, interests, and persistent progress tracking
+- **Session State**: Real-time conversation state and avatar emotion management
+- **Multi-modal Tools**: Topic selection, visual feedback, 3D avatar expressions
+- **Event-Driven Updates**: Context changes based on AI and user interactions
 
 ### Scenario 2: Real-time WebRTC Communication
-**Context**: Live audio/video interaction with AI assistant
+**Context**: Production WebRTC integration with OpenAI Realtime API
 
 **Implementation Example**:
 ```javascript
-// Real-time context management
-const realtimeContext = {
+// WebRTC context management from production application
+const webrtcContext = {
+  // Connection lifecycle management
   connection: {
-    status: "connected",
-    quality: "high",
-    latency: 45,
-    peer_connection: pc
+    peerConnection: new RTCPeerConnection(),
+    dataChannel: null,
+    status: "connecting", // connecting, connected, disconnected
+    ephemeralKey: null,
+    sdpOffer: null,
+    sdpAnswer: null
   },
+  
+  // Audio stream context
   audio: {
-    input_stream: microphoneStream,
-    output_stream: speakerStream,
-    processing_enabled: true,
-    noise_cancellation: true
+    inputStream: null, // getUserMedia stream
+    outputElement: document.createElement("audio"),
+    audioContext: new AudioContext(),
+    analyzer: null,
+    volume: 1.0,
+    isPlaying: false
   },
+  
+  // Session configuration
   session: {
-    start_time: Date.now(),
-    events: [],
-    active_tools: ["audio_processing", "speech_recognition"]
+    model: "gpt-realtime",
+    voice: "shimmer",
+    instructions: tutorInstructions,
+    modalities: ["text", "audio"],
+    temperature: 0.8,
+    startTime: null
+  },
+  
+  // Event processing
+  eventSystem: {
+    clientEvents: [], // Events sent to AI
+    serverEvents: [], // Events received from AI
+    deltaCompression: {}, // Compress frequent delta events
+    eventHandlers: {
+      "session.created": handleSessionCreated,
+      "response.audio.delta": handleAudioDelta,
+      "input_audio_buffer.speech_started": handleSpeechStart
+    }
   }
 };
+
+// Production WebRTC setup pattern
+async function initializeWebRTCContext() {
+  // 1. Get ephemeral token
+  const tokenResponse = await fetch("/token");
+  const { value: ephemeralKey } = await tokenResponse.json();
+  
+  // 2. Set up peer connection
+  const pc = new RTCPeerConnection();
+  
+  // 3. Configure audio streams
+  const audioElement = document.createElement("audio");
+  audioElement.autoplay = true;
+  pc.ontrack = (e) => {
+    audioElement.srcObject = e.streams[0];
+  };
+  
+  // 4. Add microphone input
+  const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  pc.addTrack(micStream.getTracks()[0]);
+  
+  // 5. Create data channel for events
+  const dataChannel = pc.createDataChannel("oai-events");
+  
+  // 6. Negotiate connection
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  
+  const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls?model=gpt-realtime", {
+    method: "POST",
+    body: offer.sdp,
+    headers: {
+      Authorization: `Bearer ${ephemeralKey}`,
+      "Content-Type": "application/sdp"
+    }
+  });
+  
+  const answer = { type: "answer", sdp: await sdpResponse.text() };
+  await pc.setRemoteDescription(answer);
+  
+  return { pc, dataChannel, audioElement };
+}
 ```
 
 **Key Context Components**:
-- **State/History**: Real-time event tracking and connection status
-- **Available Tools**: WebRTC APIs, audio processing, stream management
-- **Retrieved Information**: Network quality metrics, device capabilities
+- **Connection State**: WebRTC peer connection lifecycle and quality metrics
+- **Audio Context**: Stream management with real-time audio analysis
+- **Event System**: Bidirectional communication with delta compression
+- **Session Config**: AI model parameters and behavior instructions
+- **Error Recovery**: Connection failure handling and reconnection logic
 
-### Scenario 3: Multi-modal Interface with 3D Avatar
-**Context**: Interactive 3D character responding to user input
+### Scenario 3: Multi-modal 3D Avatar Interface
+**Context**: Production Three.js avatar with emotion system and audio synchronization
 
 **Implementation Example**:
 ```javascript
-// 3D avatar context system
+// 3D avatar context system from production application
 const avatarContext = {
-  visual: {
-    avatar_model: "female_teacher.glb",
-    current_animation: "idle",
-    facial_expression: "friendly",
-    lip_sync_enabled: true
+  // 3D rendering context
+  scene: {
+    renderer: new THREE.WebGLRenderer({ antialias: true }),
+    camera: new THREE.PerspectiveCamera(45, aspectRatio, 0.1, 1000),
+    scene: new THREE.Scene(),
+    lighting: {
+      ambient: new THREE.AmbientLight(0xffffff, 0.6),
+      directional: new THREE.DirectionalLight(0xffffff, 0.8),
+      fill: new THREE.DirectionalLight(0xffffff, 0.3)
+    }
   },
-  audio: {
-    voice_profile: "shimmer",
-    speech_rate: "normal",
-    volume_level: 0.8,
-    audio_analyzer: analyzerRef.current
+  
+  // Avatar model and animations
+  avatar: {
+    model: null, // Loaded GLB model
+    morphTargets: {
+      // Emotion morph targets
+      mouthSmile: 0,
+      browInnerUp: 0,
+      eyeWide: 0,
+      mouthFunnel: 0,
+      browDown: 0,
+      // Blinking targets
+      eyeBlinkLeft: 0,
+      eyeBlinkRight: 0,
+      eyesClosed: 0
+    },
+    currentEmotion: "neutral",
+    isListening: false,
+    blinkTimer: 0
   },
-  interaction: {
-    gaze_target: "user",
-    gesture_queue: [],
-    response_mode: "conversational"
+  
+  // Emotion state machine
+  emotions: {
+    neutral: { mouthSmile: 0, browInnerUp: 0, eyeWide: 0 },
+    happy: { mouthSmile: 0.8, browInnerUp: 0.3, eyeWide: 0.2 },
+    excited: { mouthSmile: 1.0, eyeWide: 0.6, browInnerUp: 0.5 },
+    thinking: { mouthFunnel: 0.4, browDown: 0.3, eyeWide: 0 },
+    encouraging: { mouthSmile: 0.6, browInnerUp: 0.4, eyeWide: 0.1 },
+    listening: { eyeWide: 0.3, browInnerUp: 0.2, mouthSmile: 0.2 }
+  },
+  
+  // Audio-visual synchronization
+  audioSync: {
+    analyzer: null, // Web Audio API analyzer
+    frequencyData: new Uint8Array(256),
+    lipSyncIntensity: 0,
+    smoothingFactor: 0.1
+  },
+  
+  // Animation system
+  animation: {
+    frameId: null,
+    idleTime: 0,
+    transitionSpeed: 0.1,
+    blinkFrequency: { min: 3000, max: 5000 },
+    nextBlinkTime: 0
   }
 };
+
+// Production emotion update system
+function updateAvatarEmotion(emotion, isListening = false) {
+  if (!avatarRef.current) return;
+  
+  // Get target morph values for emotion
+  const targetMorphs = avatarContext.emotions[emotion] || avatarContext.emotions.neutral;
+  
+  // Override with listening state if active
+  if (isListening) {
+    Object.assign(targetMorphs, avatarContext.emotions.listening);
+  }
+  
+  // Apply morphs to avatar model
+  avatarRef.current.traverse((node) => {
+    if (node.isMesh && node.morphTargetDictionary) {
+      Object.entries(targetMorphs).forEach(([morphName, targetValue]) => {
+        const morphIndex = node.morphTargetDictionary[morphName];
+        if (morphIndex !== undefined) {
+          // Smooth transition using lerp
+          const currentValue = node.morphTargetInfluences[morphIndex] || 0;
+          node.morphTargetInfluences[morphIndex] = THREE.MathUtils.lerp(
+            currentValue, 
+            targetValue, 
+            avatarContext.animation.transitionSpeed
+          );
+        }
+      });
+    }
+  });
+}
+
+// Audio-reactive lip sync with emotion preservation
+function updateLipSync() {
+  if (!avatarContext.audioSync.analyzer) return;
+  
+  avatarContext.audioSync.analyzer.getByteFrequencyData(
+    avatarContext.audioSync.frequencyData
+  );
+  
+  // Calculate audio intensity
+  const average = avatarContext.audioSync.frequencyData.reduce((a, b) => a + b) / 
+                  avatarContext.audioSync.frequencyData.length;
+  const normalized = average / 255;
+  
+  // Apply lip sync additively with current emotion
+  avatarRef.current.traverse((node) => {
+    if (node.isMesh && node.morphTargetDictionary) {
+      const jawIndex = node.morphTargetDictionary['jawOpen'];
+      if (jawIndex !== undefined) {
+        // Combine lip sync with emotion (additive)
+        const emotionJaw = node.morphTargetInfluences[jawIndex] || 0;
+        node.morphTargetInfluences[jawIndex] = emotionJaw + (normalized * 0.3);
+      }
+    }
+  });
+}
+
+// Realistic blinking system
+function updateBlinking() {
+  const now = Date.now();
+  
+  if (now >= avatarContext.animation.nextBlinkTime) {
+    // Trigger blink
+    const blinkDuration = 150; // ms
+    const blinkIntensity = Math.sin((now % blinkDuration) / blinkDuration * Math.PI);
+    
+    avatarRef.current.traverse((node) => {
+      if (node.isMesh && node.morphTargetDictionary) {
+        ['eyeBlinkLeft', 'eyeBlinkRight', 'eyesClosed'].forEach(blinkTarget => {
+          const blinkIndex = node.morphTargetDictionary[blinkTarget];
+          if (blinkIndex !== undefined) {
+            node.morphTargetInfluences[blinkIndex] = blinkIntensity;
+          }
+        });
+      }
+    });
+    
+    // Schedule next blink
+    if (blinkIntensity <= 0.01) {
+      const { min, max } = avatarContext.animation.blinkFrequency;
+      avatarContext.animation.nextBlinkTime = now + (min + Math.random() * (max - min));
+    }
+  }
+}
 ```
 
 **Key Context Components**:
-- **Structured Output**: 3D animation commands, audio synchronization
-- **State/History**: Animation state, user interaction patterns
-- **Available Tools**: 3D rendering engine, audio analysis, gesture system
+- **3D Scene Management**: Three.js renderer, camera, lighting, and model loading
+- **Emotion State Machine**: Morph target-based facial expressions with smooth transitions
+- **Audio Synchronization**: Real-time lip sync using Web Audio API frequency analysis
+- **Animation System**: Idle movements, blinking, and emotion-driven behaviors
+- **Multi-modal Integration**: Avatar emotions driven by AI conversation events
 
 ---
 
@@ -522,93 +755,372 @@ const avatarContext = {
 
 ### Optimization Strategies
 
-**Context Compression**:
+**Event Delta Compression** (from production app):
 ```javascript
-// Example: Compress conversation history
-function compressHistory(events) {
-  return events
-    .filter(event => event.type !== 'heartbeat')
-    .map(event => ({
-      type: event.type,
-      timestamp: event.timestamp,
-      content: event.content?.substring(0, 500) // Truncate long content
-    }))
-    .slice(-50); // Keep only last 50 events
+// Compress frequent delta events to reduce context noise
+function compressEventHistory(events) {
+  const eventsToDisplay = [];
+  let deltaEvents = {};
+
+  events.forEach((event) => {
+    if (event.type.endsWith("delta")) {
+      if (deltaEvents[event.type]) {
+        return; // Skip duplicate delta events per render pass
+      } else {
+        deltaEvents[event.type] = event;
+      }
+    }
+    eventsToDisplay.push(event);
+  });
+
+  return eventsToDisplay.slice(-100); // Keep last 100 events
 }
 ```
 
-**Lazy Context Loading**:
+**Context-Aware UI State Management**:
 ```javascript
-// Example: Load context components on demand
-class ContextManager {
-  async getContext(userId, components = ['basic']) {
-    const context = { user_id: userId };
-    
-    if (components.includes('history')) {
-      context.history = await this.loadHistory(userId);
-    }
-    
-    if (components.includes('preferences')) {
-      context.preferences = await this.loadPreferences(userId);
-    }
-    
-    return context;
+// Prevent context pollution during AI responses
+const handleTopicSelect = (topic) => {
+  if (isAIResponding) {
+    console.log("Ignoring topic click - AI is responding");
+    return; // Prevent context conflicts
   }
-}
+
+  // Send structured context to AI
+  sendClientEvent({
+    type: "conversation.item.create",
+    item: {
+      type: "message",
+      role: "user",
+      content: [{ type: "input_text", text: topic.prompt }]
+    }
+  });
+  
+  sendClientEvent({ type: "response.create" });
+};
 ```
 
-**Context Validation**:
+**Progressive Context Enhancement**:
 ```javascript
-// Example: Validate context completeness
-function validateContext(context) {
-  const required = ['instructions', 'user_prompt', 'session_state'];
-  const missing = required.filter(component => !context[component]);
-  
-  if (missing.length > 0) {
-    throw new Error(`Missing required context components: ${missing.join(', ')}`);
+// Load context components based on session state
+useEffect(() => {
+  if (!events || events.length === 0) return;
+
+  const firstEvent = events[events.length - 1];
+  if (!audioConfigured && firstEvent.type === "session.created") {
+    // Step 1: Configure session with mode-specific instructions
+    const instructions = MODE_INSTRUCTIONS[selectedMode];
+    
+    sendClientEvent({
+      type: "session.update",
+      session: {
+        instructions: instructions,
+        audio: { output: { voice: "shimmer" } }
+      }
+    });
+    
+    setAudioConfigured(true);
+
+    // Step 2: Trigger initial greeting after configuration
+    setTimeout(() => {
+      sendClientEvent({ type: "response.create" });
+    }, 500);
   }
-  
-  return true;
-}
+}, [events, selectedMode]);
 ```
 
-**Performance Monitoring**:
+**Real-time Performance Monitoring**:
 ```javascript
-// Example: Monitor context processing time
-function measureContextProcessing(contextFn) {
-  return async (...args) => {
-    const start = performance.now();
-    const result = await contextFn(...args);
-    const duration = performance.now() - start;
+// Monitor WebRTC connection quality for context reliability
+pc.oniceconnectionstatechange = () => {
+  console.log("ICE connection state:", pc.iceConnectionState);
+  
+  if (pc.iceConnectionState === "failed") {
+    console.error("WebRTC connection failed - context may be unreliable");
+    // Implement reconnection logic
+  }
+};
+
+// Track audio processing latency
+const audioLatencyMonitor = {
+  lastAudioTime: 0,
+  
+  onAudioReceived() {
+    const now = performance.now();
+    const latency = now - this.lastAudioTime;
     
-    console.log(`Context processing took ${duration.toFixed(2)}ms`);
-    
-    if (duration > 100) {
-      console.warn('Context processing is slow, consider optimization');
+    if (latency > 200) {
+      console.warn(`High audio latency detected: ${latency}ms`);
     }
     
-    return result;
-  };
-}
+    this.lastAudioTime = now;
+  }
+};
+```
+
+**Context Persistence Strategy**:
+```javascript
+// Multi-layer persistence for different context types
+const contextPersistence = {
+  // Session-level (memory)
+  session: {
+    events: [],
+    avatarEmotion: 'neutral',
+    currentMode: 'happy'
+  },
+  
+  // User-level (localStorage)
+  user: {
+    save(key, value) {
+      localStorage.setItem(`englishPractice_${key}`, JSON.stringify(value));
+    },
+    
+    load(key) {
+      const item = localStorage.getItem(`englishPractice_${key}`);
+      return item ? JSON.parse(item) : null;
+    }
+  },
+  
+  // Server-level (API)
+  server: {
+    async updateInstructions(mode) {
+      const instructions = MODE_INSTRUCTIONS[mode];
+      return sendClientEvent({
+        type: "session.update",
+        session: { instructions }
+      });
+    }
+  }
+};
 ```
 
 ---
 
-## Application Analysis Summary
+## Real-World Application Analysis
 
-Based on the exploration of the OpenAI Realtime Console application, this template incorporates patterns from a real-world implementation that successfully combines:
+This template is based on analysis of a production-ready English tutoring application that demonstrates sophisticated context engineering patterns. The application combines OpenAI's Realtime API with WebRTC, React, and Three.js to create an immersive educational experience.
 
-- **Real-time Communication**: WebRTC integration for low-latency audio streaming
-- **AI Integration**: OpenAI Realtime API with specialized educational instructions
-- **Multi-modal Interface**: 3D avatar with audio-synchronized animations
-- **Session Management**: Connection lifecycle and state persistence
-- **Educational Context**: Specialized tutoring instructions and progress tracking
+### Architecture Overview
 
-The application demonstrates effective context engineering through:
-1. Clear behavioral instructions for the AI tutor
-2. Real-time state management for WebRTC connections
-3. Event-driven architecture for handling user interactions
-4. Structured data flow between client and server components
-5. Error handling and recovery mechanisms
+**Technology Stack**:
+- **Backend**: Express.js server with Vite SSR middleware
+- **Frontend**: React 18 with Three.js for 3D rendering
+- **AI Integration**: OpenAI Realtime API via WebRTC data channels
+- **Real-time Communication**: WebRTC peer connections for low-latency audio
+- **State Management**: React hooks with localStorage persistence
+- **Styling**: Tailwind CSS with custom animations
 
-This template provides a framework for building similar context-aware AI applications while avoiding common pitfalls and following established best practices.
+**Key Components**:
+- `server.js`: Express server handling token generation and SDP negotiation
+- `App.jsx`: Main application orchestrating session lifecycle and context flow
+- `Avatar3D.jsx`: Three.js-powered 3D character with emotion system
+- `tutorInstructions.js`: Modular AI behavior definitions
+- `SessionControls.jsx`: WebRTC connection management
+- `ToolPanel.jsx`: Context-aware UI for mode and topic selection
+
+### Context Engineering Implementation
+
+**1. Behavioral Instructions (AI Personality)**
+```javascript
+// Multi-modal instruction system with specialized behaviors
+const baseTutorRules = `You are an enthusiastic English tutor for children, especially for a girl called Inbar. Your ONLY job is to help kids practice English conversation and pronunciation.
+
+CRITICAL RULES - FOLLOW EXACTLY:
+1. You are NOT a general assistant - you ONLY do English tutoring
+2. ALWAYS speak in English - NEVER speak Spanish or any other language
+3. Ask her often about Inbar's sisters, Tamar and Ayala; and two dogs – Lotus and Albi
+4. Keep ALL responses very short (1-2 sentences maximum)
+5. Listen for pronunciation mistakes and gently correct them immediately`;
+
+// Mode-specific extensions
+export const happyModeInstructions = `${baseTutorRules}
+HAPPY MODE PERSONALITY:
+- ALWAYS greet with: "Hi Inbar! I'm so excited to practice English with you today!"
+- Be EXTRA cheerful and enthusiastic in every response
+- Use lots of excitement words: "Amazing!", "Wonderful!", "That's so cool!"`;
+```
+
+**2. Real-time State Management**
+```javascript
+// Session state tracking across WebRTC lifecycle
+const [isSessionActive, setIsSessionActive] = useState(false);
+const [events, setEvents] = useState([]);
+const [dataChannel, setDataChannel] = useState(null);
+const [avatarEmotion, setAvatarEmotion] = useState('neutral');
+const [isAvatarListening, setIsAvatarListening] = useState(false);
+
+// Event-driven state updates
+dataChannel.addEventListener("message", (e) => {
+  const event = JSON.parse(e.data);
+  
+  // Update avatar emotion based on AI events
+  if (event.type === "response.created") {
+    setAvatarEmotion('happy');
+  } else if (event.type === "input_audio_buffer.speech_started") {
+    setIsAvatarListening(true);
+  }
+  
+  setEvents((prev) => [event, ...prev]);
+});
+```
+
+**3. Context-Aware User Interface**
+```javascript
+// Topic cards with Hebrew labels and English prompts
+const topics = [
+  { 
+    id: "family", 
+    label: "משפחה וחיות מחמד", 
+    emoji: "👨‍👩‍👧‍👦", 
+    prompt: "Let's talk about your family! Tell me about your sisters Tamar and Ayala, and your dogs Lotus and Albi!" 
+  },
+  // ... more topics
+];
+
+// Mode selector affecting AI behavior
+const handleModeSelect = (modeId) => {
+  const instructions = MODE_INSTRUCTIONS[modeId];
+  sendClientEvent({
+    type: "session.update",
+    session: { instructions: instructions }
+  });
+};
+```
+
+**4. Multi-modal Feedback System**
+```javascript
+// Encouragement animations triggered by AI transcript analysis
+if (event.type === "response.audio_transcript.delta") {
+  const transcript = event.delta?.toLowerCase() || "";
+  
+  if (transcript.includes("perfect") || transcript.includes("excellent")) {
+    setShowConfetti(true);
+    setPraiseBannerMessage("Perfect! 🎉");
+    setAvatarEmotion('excited');
+  } else if (transcript.includes("great job")) {
+    setShowSparkles(true);
+    setAvatarEmotion('happy');
+  }
+}
+```
+
+**5. Persistent Learning Context**
+```javascript
+// Star progress system with localStorage persistence
+const [totalStars, setTotalStars] = useState(0);
+
+useEffect(() => {
+  const savedStars = localStorage.getItem("englishPracticeStars");
+  if (savedStars) {
+    setTotalStars(parseInt(savedStars, 10));
+  }
+}, []);
+
+// Award stars on session completion
+useEffect(() => {
+  if (sessionCompleted) {
+    const newTotal = totalStars + 1;
+    setTotalStars(newTotal);
+    localStorage.setItem("englishPracticeStars", newTotal.toString());
+  }
+}, [sessionCompleted]);
+```
+
+**6. 3D Avatar Context Integration**
+```javascript
+// Emotion-driven morph target animations
+const EMOTION_MORPHS = {
+  happy: { mouthSmile: 0.8, browInnerUp: 0.3 },
+  excited: { mouthSmile: 1.0, eyeWide: 0.6, browInnerUp: 0.5 },
+  thinking: { mouthFunnel: 0.4, browDown: 0.3 },
+  encouraging: { mouthSmile: 0.6, browInnerUp: 0.4 }
+};
+
+// Audio-reactive lip sync with emotion overlay
+if (analyzerRef.current && avatarRef.current) {
+  const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount);
+  analyzerRef.current.getByteFrequencyData(dataArray);
+  const normalized = dataArray.reduce((a, b) => a + b) / dataArray.length / 255;
+  
+  // Apply both lip sync and emotion morphs
+  applyMorphTargets(avatarRef.current, emotion, normalized);
+}
+```
+
+### Key Context Engineering Patterns
+
+**1. Layered Context Architecture**
+- **Base Layer**: Core tutoring personality and rules
+- **Mode Layer**: Specialized behavior modifications (happy, story, question modes)
+- **Session Layer**: Real-time state and conversation history
+- **User Layer**: Personal context (family members, progress tracking)
+
+**2. Event-Driven Context Updates**
+- WebRTC events trigger state changes
+- AI transcript analysis drives visual feedback
+- User interactions update session context
+- Progress milestones modify long-term context
+
+**3. Multi-Modal Context Expression**
+- **Audio**: AI voice with emotional inflection
+- **Visual**: 3D avatar with emotion-driven animations
+- **UI**: Context-aware topic suggestions and mode selection
+- **Feedback**: Encouragement animations and progress tracking
+
+**4. Context Persistence Strategy**
+- **Session Context**: In-memory React state
+- **User Progress**: localStorage for star tracking
+- **AI Behavior**: Server-side instruction management
+- **Connection State**: WebRTC peer connection lifecycle
+
+### Performance Optimizations
+
+**Context Processing Efficiency**:
+```javascript
+// Delta event compression to reduce context noise
+events.forEach((event) => {
+  if (event.type.endsWith("delta")) {
+    if (deltaEvents[event.type]) {
+      return; // Skip duplicate delta events
+    } else {
+      deltaEvents[event.type] = event;
+    }
+  }
+});
+```
+
+**Real-time Responsiveness**:
+```javascript
+// Immediate UI feedback before AI response
+const handleTopicSelect = (topic) => {
+  if (isAIResponding) return; // Prevent context pollution
+  
+  sendClientEvent({
+    type: "conversation.item.create",
+    item: { role: "user", content: [{ type: "input_text", text: topic.prompt }] }
+  });
+  sendClientEvent({ type: "response.create" });
+};
+```
+
+### Lessons Learned
+
+**What Works Well**:
+- Modular instruction system allows easy behavior customization
+- Event-driven architecture provides responsive user experience
+- Multi-modal feedback creates engaging interactions
+- Persistent progress tracking maintains long-term engagement
+
+**Common Challenges**:
+- WebRTC connection reliability requires robust error handling
+- Audio context setup needs user gesture activation
+- 3D avatar performance optimization for lower-end devices
+- Context synchronization between client and server states
+
+**Best Practices Demonstrated**:
+- Clear separation between AI instructions and application logic
+- Graceful degradation when context components fail
+- User-centric design with immediate visual feedback
+- Privacy-conscious data handling with local storage
+
+This real-world implementation demonstrates how effective context engineering can create immersive, educational AI experiences that adapt to user needs while maintaining consistent behavior and performance.

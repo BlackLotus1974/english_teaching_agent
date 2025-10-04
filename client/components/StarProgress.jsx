@@ -115,7 +115,7 @@ export default function StarProgress({ isSessionActive, sessionCompleted, onSess
       </div>
 
       {/* CSS animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;

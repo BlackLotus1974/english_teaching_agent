@@ -4,6 +4,7 @@ import Avatar3D from "./Avatar3D";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 import StarProgress from "./StarProgress";
+import { Confetti, Sparkles, StarBurst, PraiseBanner } from "./EncouragementAnimations";
 
 export default function App() {
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -12,9 +13,15 @@ export default function App() {
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
-  const starProgressRef = useRef(null);
   const [avatarEmotion, setAvatarEmotion] = useState('neutral');
   const [isAvatarListening, setIsAvatarListening] = useState(false);
+
+  // Encouragement animation states
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showSparkles, setShowSparkles] = useState(false);
+  const [showStarBurst, setShowStarBurst] = useState(false);
+  const [praiseBannerMessage, setPraiseBannerMessage] = useState("");
+  const [showPraiseBanner, setShowPraiseBanner] = useState(false);
 
   async function startSession() {
     // Get a session token for OpenAI Realtime API
@@ -196,6 +203,34 @@ export default function App() {
           setTimeout(() => setAvatarEmotion('neutral'), 2000);
         }
 
+        // Detect praise keywords from transcript
+        if (event.type === "response.audio_transcript.delta") {
+          const transcript = event.delta?.toLowerCase() || "";
+
+          // High praise keywords - trigger confetti
+          if (transcript.includes("perfect") || transcript.includes("excellent") ||
+              transcript.includes("amazing") || transcript.includes("wonderful")) {
+            setShowConfetti(true);
+            setPraiseBannerMessage("Perfect! 🎉");
+            setShowPraiseBanner(true);
+            setAvatarEmotion('excited');
+          }
+          // Medium praise - trigger sparkles
+          else if (transcript.includes("great job") || transcript.includes("well done") ||
+                   transcript.includes("good job") || transcript.includes("very good")) {
+            setShowSparkles(true);
+            setPraiseBannerMessage("Great job! ✨");
+            setShowPraiseBanner(true);
+            setAvatarEmotion('happy');
+          }
+          // Light praise - trigger star burst
+          else if (transcript.includes("good") || transcript.includes("nice") ||
+                   transcript.includes("that's right") || transcript.includes("correct")) {
+            setShowStarBurst(true);
+            setAvatarEmotion('encouraging');
+          }
+        }
+
         // Log important events with full details
         if (event.type === "response.audio.delta" ||
             event.type === "response.audio_transcript.delta" ||
@@ -223,6 +258,19 @@ export default function App() {
 
   return (
     <>
+      {/* Encouragement Animations */}
+      <Confetti show={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <Sparkles show={showSparkles} onComplete={() => setShowSparkles(false)} />
+      <StarBurst show={showStarBurst} onComplete={() => setShowStarBurst(false)} />
+      <PraiseBanner
+        message={praiseBannerMessage}
+        show={showPraiseBanner}
+        onComplete={() => {
+          setShowPraiseBanner(false);
+          setPraiseBannerMessage("");
+        }}
+      />
+
       <nav className="absolute top-0 left-0 right-0 h-16 flex items-center bg-gradient-to-r from-purple-500 to-blue-500">
         <div className="flex items-center gap-4 w-full m-4 pb-2">
           <img style={{ width: "24px" }} src={logo} />
@@ -251,7 +299,6 @@ export default function App() {
         </section>
         <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto flex flex-col gap-4">
           <StarProgress
-            ref={starProgressRef}
             isSessionActive={isSessionActive}
             sessionCompleted={sessionCompleted}
             onSessionComplete={() => setSessionCompleted(false)}

@@ -23,11 +23,11 @@ const colorStyles = {
   red: "bg-red-100 hover:bg-red-200 border-red-300 text-red-700",
 };
 
-export default function TopicCards({ onTopicSelect, isSessionActive }) {
+export default function TopicCards({ onTopicSelect, isSessionActive, isDisabled = false }) {
   const [selectedTopic, setSelectedTopic] = useState(null);
 
   const handleTopicClick = (topic) => {
-    if (!isSessionActive) return;
+    if (!isSessionActive || isDisabled) return;
 
     setSelectedTopic(topic.id);
     onTopicSelect(topic);
@@ -46,11 +46,11 @@ export default function TopicCards({ onTopicSelect, isSessionActive }) {
           <button
             key={topic.id}
             onClick={() => handleTopicClick(topic)}
-            disabled={!isSessionActive}
+            disabled={!isSessionActive || isDisabled}
             className={`
               ${colorStyles[topic.color]}
               ${selectedTopic === topic.id ? "scale-95 ring-2 ring-offset-1" : ""}
-              ${!isSessionActive ? "opacity-60 cursor-not-allowed" : "cursor-pointer active:scale-95"}
+              ${!isSessionActive || isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer active:scale-95"}
               border-2 rounded-lg p-2.5
               transition-all duration-200
               flex flex-col items-center gap-1
