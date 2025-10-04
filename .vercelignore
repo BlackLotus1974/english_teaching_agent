@@ -1,0 +1,9 @@
+.git
+.claude
+.kiro
+node_modules
+.env
+.env.*
+*.log
+dist
+nul
