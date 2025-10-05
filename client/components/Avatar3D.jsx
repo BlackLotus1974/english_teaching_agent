@@ -160,33 +160,41 @@ export default function Avatar3D({ audioElement, emotion = 'neutral', isListenin
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         const normalized = Math.min(average / 128, 1); // Normalize to 0-1, more sensitive
 
-        // Animate morph targets for lip sync (additive to emotions)
+        // Animate morph targets for lip sync
         morphTargetMeshesRef.current.forEach((mesh) => {
           const dict = mesh.morphTargetDictionary;
           const influences = mesh.morphTargetInfluences;
 
-          // Try multiple possible morph target naming conventions
-          const mouthTargets = [
-            'mouthOpen', 'jawOpen',
-            'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U',
-            'viseme_PP', 'viseme_FF', 'viseme_TH', 'viseme_DD', 'viseme_kk',
-            'viseme_CH', 'viseme_SS', 'viseme_nn', 'viseme_RR', 'viseme_sil',
-            'jawForward', 'mouthClose', 'mouthPucker',
-            'mouthLeft', 'mouthRight', 'mouthShrugLower', 'mouthShrugUpper'
-          ];
+          // Primary mouth open targets - use the most common ones
+          const primaryMouthTargets = ['mouthOpen', 'jawOpen'];
 
-          mouthTargets.forEach((targetName) => {
+          primaryMouthTargets.forEach((targetName) => {
             if (dict[targetName] !== undefined) {
               const index = dict[targetName];
-              // Smooth interpolation for natural movement
-              // Use higher intensity for better visibility
-              const targetValue = normalized * 1.2;
-              const currentValue = influences[index] || 0;
-              // Additive blend with emotion expressions
+              // Direct interpolation to target value (not additive)
+              const targetValue = normalized * 0.8; // Reduced intensity for more natural movement
               influences[index] = THREE.MathUtils.lerp(
-                currentValue,
-                Math.min(currentValue + targetValue, 1),
-                0.4 // Faster response
+                influences[index] || 0,
+                targetValue,
+                0.3 // Smooth interpolation for natural open/close
+              );
+            }
+          });
+
+          // Additional viseme targets for variation (optional)
+          const visemeTargets = [
+            'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U'
+          ];
+
+          visemeTargets.forEach((targetName) => {
+            if (dict[targetName] !== undefined) {
+              const index = dict[targetName];
+              // Gentler variation for visemes
+              const targetValue = normalized * 0.4;
+              influences[index] = THREE.MathUtils.lerp(
+                influences[index] || 0,
+                targetValue,
+                0.2
               );
             }
           });

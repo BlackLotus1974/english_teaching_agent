@@ -46,16 +46,23 @@ The dev server runs on http://localhost:3000 with hot-reload via nodemon and Vit
     - Handles audio track setup (microphone input and AI audio output)
     - Creates and manages RTCDataChannel for event communication
     - Event state management and client event sending
+    - Detects praise keywords in AI transcript to trigger encouragement animations
   - [ToolPanel.jsx](client/components/ToolPanel.jsx) - Session configuration and UI tips
     - Listens for `session.created` event to trigger initial configuration
     - Sends `session.update` event with tutor instructions and audio settings
     - Triggers initial greeting via `response.create` event
+    - Manages mode selection and topic card interactions
   - [SessionControls.jsx](client/components/SessionControls.jsx) - Connect/disconnect UI
   - [Avatar3D.jsx](client/components/Avatar3D.jsx) - Three.js 3D avatar with audio-reactive animation
     - Loads GLB avatar from `/public/avatar.glb`
     - Uses Web Audio API analyzer to detect audio levels from AI response
     - Animates morph targets (blend shapes) for lip sync based on audio frequency data
     - Supports multiple viseme naming conventions (mouthOpen, viseme_aa, etc.)
+    - Displays emotions (neutral, happy, encouraging, thinking, excited, listening)
+  - [StarProgress.jsx](client/components/StarProgress.jsx) - Tracks session completion with star rewards
+  - [EncouragementAnimations.jsx](client/components/EncouragementAnimations.jsx) - Visual feedback (confetti, sparkles, star burst, praise banners)
+  - [TopicCards.jsx](client/components/TopicCards.jsx) - Clickable conversation starter cards
+  - [ModeSelector.jsx](client/components/ModeSelector.jsx) - UI for selecting tutor mode
   - [EventLog.jsx](client/components/EventLog.jsx) - Real-time event logging panel
 
 ### WebRTC Flow
@@ -79,14 +86,19 @@ The AI tutor behavior is defined in [shared/tutorInstructions.js](shared/tutorIn
 - Session greeting behavior (always greets child by name first)
 - Conversation topics specific to the child (sisters Tamar and Ayala, dogs Lotus and Albi)
 
-The instructions file exports a single string constant `tutorInstructions` containing the full system prompt.
+The instructions file exports three mode-specific instruction sets:
+- `happyModeInstructions` - Extra cheerful and energetic tutor
+- `storyModeInstructions` - Interactive storytelling focus
+- `questionModeInstructions` - Question-driven to encourage more speaking
+
+Mode selection happens via [ModeSelector.jsx](client/components/ModeSelector.jsx) component, and the selected mode's instructions are applied during session configuration.
 
 Key configuration in session update (sent in [ToolPanel.jsx](client/components/ToolPanel.jsx)):
 - `model: "gpt-realtime"`
 - `voice: "shimmer"` (female voice to match avatar)
 - Turn detection with server VAD (Voice Activity Detection)
 - Modalities: text and audio
-- `instructions` field populated from tutorInstructions
+- `instructions` field populated from selected mode instructions
 
 ## Environment Setup
 
