@@ -35,10 +35,23 @@ export default function ToolPanel({
     }
   }, [events]);
 
-  // Handle mode selection
+  // Handle mode selection and update session if active
   const handleModeSelect = (modeId) => {
     console.log("Mode selected:", modeId);
     setSelectedMode(modeId);
+
+    // If session is active, update the instructions immediately
+    if (isSessionActive && audioConfigured) {
+      const instructions = MODE_INSTRUCTIONS[modeId];
+      console.log(`Updating active session with ${modeId} mode instructions...`);
+
+      sendClientEvent({
+        type: "session.update",
+        session: {
+          instructions: instructions,
+        },
+      });
+    }
   };
 
   // Handle topic card selection - send user message to AI

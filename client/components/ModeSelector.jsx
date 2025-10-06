@@ -28,7 +28,6 @@ export default function ModeSelector({ onModeSelect, isSessionActive, currentMod
   const [selectedMode, setSelectedMode] = useState(currentMode || "happy");
 
   const handleModeClick = (mode) => {
-    if (isSessionActive) return; // Can't change mode during active session
     setSelectedMode(mode.id);
     onModeSelect(mode.id);
   };
@@ -36,7 +35,7 @@ export default function ModeSelector({ onModeSelect, isSessionActive, currentMod
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h3 className="text-lg font-bold mb-3 text-gray-800">
-        {isSessionActive ? "מצב נוכחי" : "בחרי מצב שיחה"}
+        {isSessionActive ? "שנה מצב שיחה" : "בחרי מצב שיחה"}
       </h3>
       <div className="grid grid-cols-3 gap-2">
         {MODES.map((mode) => {
@@ -57,12 +56,11 @@ export default function ModeSelector({ onModeSelect, isSessionActive, currentMod
             <button
               key={mode.id}
               onClick={() => handleModeClick(mode)}
-              disabled={isSessionActive}
               className={`
                 p-3 rounded-lg border-2 transition-all duration-200
                 ${colorClasses[mode.color]}
                 ${isSelected ? "scale-105 shadow-lg" : ""}
-                ${isSessionActive ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+                cursor-pointer
                 flex flex-col items-center gap-1
               `}
             >
@@ -77,11 +75,9 @@ export default function ModeSelector({ onModeSelect, isSessionActive, currentMod
           );
         })}
       </div>
-      {!isSessionActive && (
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          בחרי מצב לפני תחילת השיחה
-        </p>
-      )}
+      <p className="text-xs text-gray-500 mt-2 text-center">
+        {isSessionActive ? "אפשר לשנות מצב בזמן השיחה" : "בחרי מצב לפני תחילת השיחה"}
+      </p>
     </div>
   );
 }
