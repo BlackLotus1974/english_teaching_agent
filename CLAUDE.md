@@ -121,8 +121,27 @@ Key configuration in session update (sent in [ToolPanel.jsx](client/components/T
 - **Express** for server-side rendering and API routes
 - **Tailwind CSS** for styling (with PostCSS and nesting)
 
+## Shared Code
+- **[shared/tutorInstructions.js](shared/tutorInstructions.js)** - Exports three mode-specific instruction sets with strict English-only rules:
+  - `happyModeInstructions` - Extra cheerful and energetic tutor
+  - `storyModeInstructions` - Interactive storytelling focus
+  - `questionModeInstructions` - Question-driven to encourage more speaking
+  - Child-specific context: Inbar (student), sisters Tamar and Ayala, dogs Lotus and Albi
+
 ## File Watching
 Nodemon watches server.js and all client files ([nodemon.json](nodemon.json)). Changes trigger automatic restart with 1s delay.
+
+## Testing
+This project currently has no automated test suite. Testing is done manually through the browser interface at http://localhost:3000.
+
+## Debugging Tools
+- **inspect-avatar.html** - Standalone HTML tool in project root to preview and test avatar GLB files before integration. Open directly in browser to inspect morph targets and animations.
+
+## Deployment
+The project is configured for Vercel deployment via `vercel.json`. The build process:
+1. Runs `npm run build` to create production client bundle in `dist/client`
+2. Server runs via `node server.js` in production mode
+3. No serverless functions used - runs as a Node.js server
 
 ## Important Notes
 - The application uses WebRTC data channels for bidirectional event communication with OpenAI
@@ -134,3 +153,9 @@ Nodemon watches server.js and all client files ([nodemon.json](nodemon.json)). C
 - Voice is set to "shimmer" (female) to match the female avatar character
 - Avatar requires GLB file at `/public/avatar.glb` with morph targets for lip sync
 - The `/session` endpoint exists but is currently unused (direct client-to-OpenAI connection is used instead)
+
+## Additional Documentation
+- **AGENTS.md** - Agent methodology documentation
+- **Context-Engineering-Template.md** - Detailed prompt engineering guide with production insights
+- **Claude-Code-Debugging-Middleware.md** - Debugging middleware documentation
+- **README-SETUP.md** - Additional setup notes
